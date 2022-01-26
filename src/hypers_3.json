@@ -1,0 +1,9 @@
+{
+    "model_hypers": {"filters": 18, 
+                     "activation": "selu",
+                     "last_activation": "sigmoid"},
+    "train_hypers": {"epochs": 100,
+                     "batch_size": 32},
+    "data_hypers": {"data_path": "/groups/yshirley/cnntrain"}
+
+}
