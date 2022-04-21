@@ -33,6 +33,7 @@ def density_preprocessing(x, y):
 def co_preprocessing(data_path='/groups/yshirley/cnntrain512'):
     if os.path.isfile('../data/temp_co/dust_filaments_0312.npy'):
         x,y=np.load('../data/temp_co/dust_filaments_0312.npy')
+        print(x.shape, y.shape)
     else:
 
 
@@ -52,7 +53,7 @@ def co_preprocessing(data_path='/groups/yshirley/cnntrain512'):
         #print(labels_no[0].shape)
         #print(tracer[0].shape)
         #tracer = load_fits(tracer_files)
-        dataset = co + tracer
+        dataset = np.concatenate((co, tracer), axis=0)
         labels = np.concatenate((labels_co, labels_no), axis=0)
         #print(dataset.shape)
         #labels = [1]*140+[0]*60+[1]*60+[0]*140 # len(co) len(tracer)
@@ -64,6 +65,7 @@ def co_preprocessing(data_path='/groups/yshirley/cnntrain512'):
         #print(x.shape)
         y = np.asarray(labels) # true or false for filament
         print(y.shape)
+        print(x.shape)
         #z = np.abs(np.asarray(true_labels))
 
         min_data = np.min(x)
@@ -81,7 +83,7 @@ def co_preprocessing(data_path='/groups/yshirley/cnntrain512'):
         y = np.expand_dims(y, axis=-1)
         #z = np.expand_dims(z, axis=-1)
         #print(x.shape)
-
+ 
         np.save('../data/temp_co/dust_filaments_0312.npy',[x,y])
 
     return x, y
@@ -100,8 +102,8 @@ def get_co_tracer_files(data_path):
 def load_fits_co(files):
     co_data = []
     mask_data = []
-    print(files[0])
-    for file in [files[0]]:
+    #print(files[0])
+    for file in files:
         with fits.open(file) as fits_data:
             co_data.append(fits_data[0].data)
         with fits.open(file.replace('image', 'mask')) as fits_data:
@@ -113,8 +115,8 @@ def load_fits_co(files):
 def load_fits_no(files):
     co_data = []
     mask_data = []
-    print(files[0])
-    for file in [files[0]]:
+    #print(files[0])
+    for file in files:
         with fits.open(file) as fits_data: # mask data
             co_data.append(fits_data[0].data)
         with fits.open(file.replace('noimage', 'noimagemask')) as fits_data: # regular data
@@ -167,4 +169,4 @@ def normalize(data):
     return data
 
 
-co_preprocessing()
+#co_preprocessing()
