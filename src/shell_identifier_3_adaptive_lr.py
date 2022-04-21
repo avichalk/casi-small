@@ -3,9 +3,6 @@ import json
 import sys
 from pathlib import Path
 import os
-from resource import *
-import tracemalloc
-import traceback
 
 import tensorflow.keras.backend as K
 import numpy as np
@@ -16,7 +13,6 @@ from tensorflow.keras.models import model_from_json
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 #from tensorflow.keras.utils import multi_gpu_model
-from tensorflow.python.keras.utils.multi_gpu_utils import multi_gpu_model
 from sklearn.model_selection import train_test_split
 from tensorflow.python.client import device_lib
 
@@ -25,50 +21,36 @@ from preprocessing_log_binary2 import co_preprocessing, density_preprocessing
 
 
 def main():
-
-    tracemalloc.start()
-
-    current, peak = tracemalloc.get_traced_memory()
-    print(current / 10**6) 
-
-    if len(sys.argv) == 2:
-        name = sys.argv[1]
-    else:
-        name = 'test'
-# make directories
+    # make directories
     os.makedirs('../data/ModelOutputs/',exist_ok=True)
     os.makedirs('../data/temp_co/',exist_ok=True)
     os.makedirs('../logs/',exist_ok=True)
 
+    #sets name of model
+    if len(sys.argv) == 2:
+        name = sys.argv[1]
+    else:
+        name = 'test'
+
+    #loads contents of json file into a dictionary
     with open('hypers_3.json', 'r') as f:
         params = json.load(f)
-    
-    current, peak = tracemalloc.get_traced_memory()
-    #print(current / 10**6) 
 
+    #puts all contents into their own lists
     model_hypers = params['model_hypers']
     train_hypers = params['train_hypers']
     data_hypers = params['data_hypers']
-    hypers = {**model_hypers, **train_hypers, **data_hypers}
+    hypers = {**model_hypers, **train_hypers, **data_hypers} #unpacks lists?
 
-    current, peak = tracemalloc.get_traced_memory()
-    #print(current / 10**6)
+    # determining preprocessing
+    #preprocessing = co_preprocessing # replace w/ density_preprocessing if nessecary
 
     x, y = co_preprocessing(data_path=data_hypers['data_path'])
-    #print(x.shape)
-    np.save("../logs/before_training_x.npy", x)
-    np.save("../logs/before_training_y.npy", y)
+    #print(np.shape(x), np.shape(y))
 
-    current, peak = tracemalloc.get_traced_memory()
-    #print(current / 10**6)
-    current, peak = tracemalloc.get_traced_memory()
-    #print(current / 10**6)
-    #print(traceback.print_stack())
     model = ShellIdentifier(name, model_hypers=model_hypers)
-    #current, peak = tracemalloc.get_traced_memory()
-    #print(current / 10**6)
-    #print('model returned')
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1)
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.205)
 
     model.fit(x_train, y_train, **train_hypers)
 
@@ -83,6 +65,8 @@ def main():
 
     pred = model.predict(x,batch_size=hypers['batch_size'])
 
+    #print(np.shape(pred), np.shape(y))
+
     #error = model.evaluate(y, pred)
 
     #print(f'Total error of final model: {error}\n\n')
@@ -92,9 +76,7 @@ def main():
                         Y=y,
                         P=pred)
 
-lr = 0.001    
-
-
+    
 class ShellIdentifier:
     def __init__(self,
                  name,
@@ -110,20 +92,17 @@ class ShellIdentifier:
         else:
             self.new_init(model_hypers)
 
-    def new_init(self, model_hypers): 
+    def new_init(self, model_hypers):
         if self.gpu_count > 1:
             with tf.device('/cpu:0'):
                 self.model = self.build_model(**model_hypers)
 
             self.multi_gpu_model = multi_gpu_model(self.model,
                                                    gpus=self.gpu_count)
-            self.multi_gpu_model.compile(optimizer=SGD(lr=lr, momentum=0.9), loss='mse')
+            self.multi_gpu_model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
         else:
             self.model = self.build_model(**model_hypers)
-            print('here?')
-            current, peak = tracemalloc.get_traced_memory()
-            print(current / 10**6)
-            self.model.compile(optimizer=SGD(lr=lr, momentum=0.9), loss='mse')
+            self.model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
 
     def load_init(self, name):
         if self.gpu_count > 1:
@@ -132,13 +111,10 @@ class ShellIdentifier:
 
             self.multi_gpu_model = multi_gpu_model(self.model,
                                                    gpus=self.gpu_count)
-            self.multi_gpu_model.compile(optimizer=SGD(lr=lr, momentum=0.9), loss='mse')
+            self.multi_gpu_model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
         else:
             self.model = load_model(name)
-            print('before model.compile cpu ver')
-            current, peak = tracemalloc.get_traced_memory()
-            print(current / 10**6)
-            self.model.compile(optimizer=SGD(lr=lr, momentum=0.9), loss='mse')
+            self.model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
 
     def fit(self, x, y, epochs=1, batch_size=64, verbose=1):
         if self.gpu_count > 1:
@@ -149,14 +125,14 @@ class ShellIdentifier:
 
         x_train, x_val, y_train, y_val = train_test_split(x,
                                                           y,
-                                                          test_size=0.1)
-#        gen = ImageDataGenerator(rotation_range=5,
-#                                 width_shift_range=0.1,
-#                                 height_shift_range=0.1,
-#                                 horizontal_flip=True,
-#                                 vertical_flip=True,
-#                                 fill_mode='constant',
-#                                 cval=0.)
+                                                          test_size=0.255)
+        # gen = ImageDataGenerator(rotation_range=5,
+        #                         width_shift_range=0.1,
+        #                         height_shift_range=0.1,
+        #                         horizontal_flip=True,
+        #                         vertical_flip=True,
+        #                         fill_mode='constant',
+        #                         cval=0.)
 
         csv_logger = CSVLogger(f'../logs/{self.name}_training.csv',
                                append=True)
@@ -164,18 +140,18 @@ class ShellIdentifier:
                                      save_weights_only=True,
                                      save_best_only=True)
 
-#        model.fit_generator(gen.flow(x_train, y_train, batch_size=batch_size),
-#                            steps_per_epoch=x_train.shape[0] / batch_size,
-#                            epochs=epochs,
-#                            verbose=verbose,
-#                            callbacks=[csv_logger, checkpoint],
-#                            validation_data=(x_val, y_val))
+        # model.fit_generator(gen.flow(x_train, y_train, batch_size=batch_size),
+        #                    steps_per_epoch=x_train.shape[0] / batch_size,
+        #                    epochs=epochs,
+        #                    verbose=verbose,
+        #                    callbacks=[csv_logger, checkpoint],
+        #                    validation_data=(x_val, y_val))
 
         def scheduler(epoch):
             lrate=K.get_value(model.optimizer.lr)
-            if epoch % 19==0:
+            if epoch % 3==0:
                 K.set_value(model.optimizer.lr, lrate/2.0)
-            if epoch % 31==0:
+            if epoch % 11==0:
                 K.set_value(model.optimizer.lr, lrate*1.5)
             return K.get_value(model.optimizer.lr) 
        
@@ -183,7 +159,9 @@ class ShellIdentifier:
         early_stop = EarlyStopping(monitor='val_loss', min_delta=0.0001,patience=100, mode='auto') 
         
         model.fit(x=x_train,y=y_train,
-                  batch_size=batch_size,          
+                  batch_size=batch_size,
+                    #steps_per_epoch=10,          
+                    #validation_steps=10,
                             epochs=epochs,
                             verbose=verbose,
                             callbacks=[csv_logger, checkpoint,change_lr,early_stop],
@@ -222,17 +200,11 @@ class ShellIdentifier:
                     noise_std=0.1,
                     activation='selu',
                     last_activation='selu'):
-        print('building model')
-        traceback.print_stack()
-        current, peak = tracemalloc.get_traced_memory()
-        print(current / 10**6)
-        model = arch.restrict_net_residual_block(filters=filters,
+        return arch.residual_u_net_2d(filters=filters,
                                    noise_std=noise_std,
                                    activation=activation,
                                    final_activation=last_activation,
                                    )
-        print('done with model')
-        return model
 #        return arch.dilated_res_net(filters=filters,
 #                                   noise_std=noise_std,
 #                                   activation=activation,
@@ -285,3 +257,4 @@ def get_gpu_count():
 
 if __name__ == '__main__':
     main()
+

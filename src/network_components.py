@@ -73,7 +73,7 @@ def res_block(x,
     pred = BatchNormalization()(pred)
 
     if project:
-        x = Conv2D(filters, (1, 1, 1))(x)
+        x = Conv2D(filters, (1, 1,))(x)
         x = BatchNormalization()(x)
     pred = merge([x, pred])
     return Activation(activation)(pred)
