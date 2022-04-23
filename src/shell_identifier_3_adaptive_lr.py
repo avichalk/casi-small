@@ -85,7 +85,8 @@ class ShellIdentifier:
         self.name = name
         self.gpu_count = get_gpu_count()
         self.model = None
-        self.multi_gpu_model = None
+        #self.multi_gpu_model = None
+        self.strategy = tf.distribute.MirroredStrategy()
 
         if load and (model_hypers is None):
             self.load_init(name)
@@ -94,31 +95,31 @@ class ShellIdentifier:
 
     def new_init(self, model_hypers):
         if self.gpu_count > 1:
-            with tf.device('/cpu:0'):
+            with self.strategy.scope(): #tf.device('/cpu:0'):
                 self.model = self.build_model(**model_hypers)
 
-            self.multi_gpu_model = multi_gpu_model(self.model,
-                                                   gpus=self.gpu_count)
-            self.multi_gpu_model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
+            #self.multi_gpu_model = multi_gpu_model(self.model,
+            #                                       gpus=self.gpu_count)
+            self.model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
         else:
             self.model = self.build_model(**model_hypers)
             self.model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
 
     def load_init(self, name):
         if self.gpu_count > 1:
-            with tf.device('/cpu:0'):
-                self.model = load_model(name)
+            with self.strategy.scope(): #tf.device('/cpu:0'):
+                self.model = self.build_model(**model_hypers)
 
-            self.multi_gpu_model = multi_gpu_model(self.model,
-                                                   gpus=self.gpu_count)
-            self.multi_gpu_model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
+            #self.multi_gpu_model = multi_gpu_model(self.model,
+            #                                       gpus=self.gpu_count)
+            self.model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
         else:
             self.model = load_model(name)
             self.model.compile(optimizer=SGD(lr=0.02, momentum=0.9), loss='mse')
 
     def fit(self, x, y, epochs=1, batch_size=64, verbose=1):
         if self.gpu_count > 1:
-            model = self.multi_gpu_model
+            model = self.model
             batch_size = batch_size * self.gpu_count
         else:
             model = self.model
@@ -175,7 +176,7 @@ class ShellIdentifier:
 
     def predict(self, x, batch_size=64):
         if self.gpu_count > 1:
-            model = self.multi_gpu_model
+            model = self.model
             batch_size = batch_size * self.gpu_count
         else:
             model = self.model
@@ -188,7 +189,7 @@ class ShellIdentifier:
 
     def evaluate(self, x, y, batch_size=64):
         if self.gpu_count > 1:
-            model = self.multi_gpu_model
+            model = self.model
             batch_size = batch_size * self.gpu_count
         else:
             model = self.model
@@ -257,4 +258,3 @@ def get_gpu_count():
 
 if __name__ == '__main__':
     main()
-
